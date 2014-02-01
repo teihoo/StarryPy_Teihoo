@@ -7,6 +7,13 @@ import socket
 import datetime
 
 import construct
+if sys.platform.startswith("linux"):
+    from twisted.internet import epollreactor
+    epollreactor.install()
+elif sys.platform.startswith("win"):
+    from twisted.internet import iocpreactor
+    iocpreactor.install()
+
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, connectionDone
 from construct import Container
