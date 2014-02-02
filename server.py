@@ -90,6 +90,7 @@ class StarryPyServerProtocol(Protocol):
         }
         logger.info("Created StarryPyServerProtocol with UUID %s" % self.id)
         self.client_protocol = None
+        self.packet_dump = open("packet_dump.log", "w")
 
     def connectionMade(self):
         """
@@ -119,6 +120,7 @@ class StarryPyServerProtocol(Protocol):
         :rtype : None
         """
         if 48 >= packet.id:
+            self.packet_dump.write("%s (Direction: FROM %s): \n%s\n\n" % (packets.Packets(packet.id), packets.Direction(packet.direction), packet.data.encode("hex")))
             if self.handle_starbound_packets(packet):
                 self.client_protocol.transport.write(
                     packet.original_data)
