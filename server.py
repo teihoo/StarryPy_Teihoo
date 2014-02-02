@@ -8,10 +8,10 @@ import datetime
 import platform
 
 import construct
-from twisted.internet import reactor
 if platform.system() == "Windows":
     from twisted.internet import iocpreactor
     iocpreactor.install()
+from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, connectionDone, DatagramProtocol
 from construct import Container
