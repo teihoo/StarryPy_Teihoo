@@ -177,7 +177,7 @@ class PluginManager(object):
         return all(return_values)
 
     def collect_hooks(self, command):
-        self.logger.info("collecting hooks for: %s" % command)
+        self.logger.debug("collecting hooks for: %s" % command)
         self.cached_hooking_plugins[command] = []
         for plugin in self.plugins.itervalues():
             if hasattr(plugin, command):

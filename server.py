@@ -566,27 +566,6 @@ class StarryPyServerFactory(ServerFactory):
         p = ServerFactory.buildProtocol(self, address)
         return p
 
-    def reap_dead_protocols(self):
-        logger.debug("Reaping dead connections.")
-        count = 0
-        start_time = datetime.datetime.utcnow()
-        for protocol in self.protocols.itervalues():
-            if (
-                    protocol.packet_stream.last_received_timestamp - start_time).total_seconds() > self.config.reap_time:
-                protocol.connectionLost()
-                count += 1
-                continue
-            if protocol.client_protocol is not None and (
-                    protocol.client_protocol.packet_stream.last_received_timestamp - start_time).total_seconds() > self.config.reap_time:
-                protocol.connectionLost()
-                count += 1
-        if count == 1:
-            logger.info("1 connection reaped.")
-        elif count > 1:
-            logger.info("%d connections reaped.")
-        else:
-            logger.debug("No connections reaped.")
-
 
 class StarboundClientFactory(ClientFactory):
     """
@@ -605,20 +584,15 @@ class StarboundClientFactory(ClientFactory):
 if __name__ == '__main__':
     logger = logging.getLogger('starrypy')
     logger.setLevel(9)
-    fh_d = logging.FileHandler("debug.log")
-    fh_d.setLevel(logging.DEBUG)
     fh_w = logging.FileHandler("server.log")
     fh_w.setLevel(logging.INFO)
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(logging.INFO)
     logger.addHandler(sh)
-    logger.addHandler(fh_d)
     logger.addHandler(fh_w)
     config = ConfigurationManager()
     console_formatter = logging.Formatter(config.logging_format_console)
     logfile_formatter = logging.Formatter(config.logging_format_logfile)
-    debugfile_formatter = logging.Formatter(config.logging_format_debugfile)
-    fh_d.setFormatter(debugfile_formatter)
     fh_w.setFormatter(logfile_formatter)
     sh.setFormatter(console_formatter)
     logger.info("Started StarryPy server version %s" % VERSION)
