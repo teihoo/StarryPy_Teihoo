@@ -20,11 +20,7 @@ import packets
 from plugin_manager import PluginManager, route, FatalPluginError
 from utility_functions import build_packet
 
-VERSION = "1.2.3"
-TRACE = False
-TRACE_LVL = 9
-logging.addLevelName(9, "TRACE")
-logging.Logger.trace = lambda s, m, *a, **k: s._log(TRACE_LVL, m, a, **k)
+VERSION = "1.speedy"
 
 
 class StarryPyServerProtocol(Protocol):
@@ -36,11 +32,9 @@ class StarryPyServerProtocol(Protocol):
         """
         """
         self.id = str(uuid4().hex)
-        logger.trace("Creating protocol with ID %s.", self.id)
         self.factory.protocols[self.id] = self
         self.player = None
         self.state = None
-        logger.trace("Trying to initialize configuration manager.")
         self.config = ConfigurationManager()
         self.parsing = False
         self.buffering_packet = None
@@ -402,19 +396,14 @@ class StarryPyServerProtocol(Protocol):
             for line in lines:
                 self.send_chat_message(line)
             return
-        if self.player is not None:
-            logger.trace("Calling send_chat_message from player %s on channel %d on world '%s' with reported username of %s with message: %s", self.player.name, channel, world, name, text)
         chat_data = packets.chat_received().build(Container(chat_channel=channel,
                                                             world=world,
                                                             client_id=0,
                                                             name=name,
                                                             message=text.encode("utf-8")))
-        logger.trace("Built chat payload. Data: %s", chat_data.encode("hex"))
         chat_packet = build_packet(packets.Packets.CHAT_RECEIVED,
                                    chat_data)
-        logger.trace("Built chat packet. Data: %s", chat_packet.encode("hex"))
         self.transport.write(chat_packet)
-        logger.debug("Sent chat message with text: %s", text)
     def write(self, data):
         """
         Convenience method to send data to the client.
@@ -438,8 +427,7 @@ class StarryPyServerProtocol(Protocol):
         try:
             self.factory.protocols.pop(self.id)
         except:
-            self.logger.trace("Protocol was not in factory list. This should not happen.")
-
+            pass
 class ClientProtocol(Protocol):
     """
     The protocol class which handles the connection to the Starbound server.
@@ -523,8 +511,6 @@ class StarryPyServerFactory(ServerFactory):
         except FatalPluginError:
             logger.critical("Shutting Down.")
             sys.exit()
-        self.reaper = LoopingCall(self.reap_dead_protocols)
-        self.reaper.start(self.config.reap_time)
         logger.debug("Factory created, endpoint of port %d" % self.config.bind_port)
 
     def stopFactory(self):
@@ -587,14 +573,12 @@ class StarryPyServerFactory(ServerFactory):
         for protocol in self.protocols.itervalues():
             if (
                     protocol.packet_stream.last_received_timestamp - start_time).total_seconds() > self.config.reap_time:
-                logger.trace("Reaping protocol %s. Reason: Server protocol timeout.", protocol.id)
                 protocol.connectionLost()
                 count += 1
                 continue
             if protocol.client_protocol is not None and (
                     protocol.client_protocol.packet_stream.last_received_timestamp - start_time).total_seconds() > self.config.reap_time:
                 protocol.connectionLost()
-                logger.trace("Reaping protocol %s. Reason: Client protocol timeout.", protocol.id)
                 count += 1
         if count == 1:
             logger.info("1 connection reaped.")
@@ -611,11 +595,9 @@ class StarboundClientFactory(ClientFactory):
     protocol = ClientProtocol
 
     def __init__(self, server_protocol):
-        logger.trace("Client protocol instantiated.")
         self.server_protocol = server_protocol
 
     def buildProtocol(self, address):
-        logger.trace("Building protocol in StarboundClientFactory to address %s", address)
         protocol = ClientFactory.buildProtocol(self, address)
         protocol.server_protocol = self.server_protocol
         return protocol
@@ -623,12 +605,6 @@ class StarboundClientFactory(ClientFactory):
 if __name__ == '__main__':
     logger = logging.getLogger('starrypy')
     logger.setLevel(9)
-    if TRACE:
-        trace_logger = logging.FileHandler("trace.log")
-        trace_logger.setLevel("TRACE")
-        trace_logger.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-        logger.addHandler(trace_logger)
-        logger.trace("Initialized trace logger.")
     fh_d = logging.FileHandler("debug.log")
     fh_d.setLevel(logging.DEBUG)
     fh_w = logging.FileHandler("server.log")
@@ -638,30 +614,13 @@ if __name__ == '__main__':
     logger.addHandler(sh)
     logger.addHandler(fh_d)
     logger.addHandler(fh_w)
-    logger.trace("Attempting initialization of configuration manager singleton.")
     config = ConfigurationManager()
-    logger.trace("Attemping to set logging formatters from configuration.")
     console_formatter = logging.Formatter(config.logging_format_console)
     logfile_formatter = logging.Formatter(config.logging_format_logfile)
     debugfile_formatter = logging.Formatter(config.logging_format_debugfile)
     fh_d.setFormatter(debugfile_formatter)
     fh_w.setFormatter(logfile_formatter)
     sh.setFormatter(console_formatter)
-    if config.port_check:
-        logger.debug("Port check enabled. Performing port check to %s:%d", config.upstream_hostname,
-                     config.upstream_port)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex((config.upstream_hostname, config.upstream_port))
-        if result != 0:
-            logger.critical("The starbound server is not connectable at the address %s:%d." % (
-                config.upstream_hostname, config.upstream_port))
-            logger.critical(
-                "Please ensure that you are running starbound_server on the correct port and that is reflected in the StarryPy configuration.")
-            sys.exit()
-        sock.shutdown(SHUT_RDWR)
-        sock.close()
-        logger.debug("Port check succeeded. Continuing.")
     logger.info("Started StarryPy server version %s" % VERSION)
     factory = StarryPyServerFactory()
     logger.debug("Attempting to listen on TCP port %d", factory.config.bind_port)

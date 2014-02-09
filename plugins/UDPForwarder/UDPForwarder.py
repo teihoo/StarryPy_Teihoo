@@ -8,7 +8,7 @@ from base_plugin import BasePlugin
 class UDPForwader(BasePlugin):
     """Forwards UDP datagrams to the gameserver, mostly used for Valve's Steam style statistis queries"""
     name = "udp_forwarder"
-    auto_activate = True
+    auto_activate = False
 
     def activate(self):
 

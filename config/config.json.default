@@ -26,7 +26,7 @@
             "auto_activate": true
         },
         "chat_logger": {
-            "auto_activate": true
+            "auto_activate": false
         },
         "command_dispatcher": {
             "auto_activate": true
@@ -34,9 +34,6 @@
         "motd_plugin": {
             "auto_activate": true,
             "motd": "Welcome to the server! Play nice."
-        },
-        "mute_manager": {
-            "auto_activate": true
         },
         "new_player_greeter_plugin": {
             "auto_activate": true,
@@ -153,7 +150,7 @@
             "auto_activate": true
         },
         "starbound_config_manager": {
-            "auto_activate": true
+            "auto_activate": false
         },
         "user_management_commands": {
             "auto_activate": true
@@ -163,10 +160,8 @@
         }
     },
     "plugin_path": "plugins",
-    "port_check": true,
     "reap_time": 10,
     "server_connect_timeout": 5,
-    "starbound_path": "/opt/starbound/",
     "upstream_hostname": "localhost",
     "upstream_port": 21024
 }

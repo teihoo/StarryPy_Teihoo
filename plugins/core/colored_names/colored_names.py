@@ -9,7 +9,7 @@ class ColoredNames(BasePlugin):
     """
     name = "colored_names_plugin"
     depends = ['player_manager']
-    auto_activate = True
+    auto_activate = False
 
     def activate(self):
         super(ColoredNames, self).activate()
