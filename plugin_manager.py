@@ -54,10 +54,10 @@ class PluginManager(object):
         self.base_class = base_class
         self.factory = factory
         self.load_order = []
-        #self.plugin_dir = os.path.realpath(self.config.plugin_path)
         self.plugin_dir = path.child(self.config.plugin_path)
         sys.path.append(self.plugin_dir.path)
         self.load_plugins(self.plugin_dir)
+        self.cached_hooking_plugins = {}
 
         self.logger.info("Loaded plugins:\n%s" % "\n".join(
             ["%s, Active: %s" % (plugin.name, plugin.active) for plugin in self.plugins.itervalues()]))
@@ -160,7 +160,10 @@ class PluginManager(object):
         return_values = []
         if protocol is None:
             return True
-        for plugin in self.plugins.itervalues():
+        if command not in self.cached_hooking_plugins:
+            self.collect_hooks(command)
+
+        for plugin in self.cached_hooking_plugins[command]:
             try:
                 if not plugin.active:
                     continue
@@ -172,6 +175,13 @@ class PluginManager(object):
             except:
                 self.logger.exception("Error in plugin %s with function %s.", str(plugin), command)
         return all(return_values)
+
+    def collect_hooks(self, command):
+        self.logger.info("collecting hooks for: %s" % command)
+        self.cached_hooking_plugins[command] = []
+        for plugin in self.plugins.itervalues():
+            if hasattr(plugin, command):
+                self.cached_hooking_plugins[command].append(plugin)
 
     def get_by_name(self, name):
         """
