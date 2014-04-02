@@ -55,6 +55,14 @@ def migrate_db(config):
             dbcur.execute('ALTER TABLE `players` ADD COLUMN `org_name`;')
             dbcur.execute('UPDATE `players` SET `org_name`=`name`;')
             dbcon.commit()
+			
+    try:
+        dbcur.execute('SELECT title FROM players;')
+    except sqlite3.OperationalError, e:
+        if "column" in str(e):
+            dbcur.execute('ALTER TABLE `players` ADD COLUMN `title`;')
+            dbcur.execute('UPDATE `players` SET `title`=``;')
+            dbcon.commit()
     dbcon.close()
 
 
@@ -174,13 +182,15 @@ class Player(Base):
     planet = Column(String)
     on_ship = Column(Boolean)
     muted = Column(Boolean)
+    title = Column(String)
 
     ips = relationship("IPAddress", order_by="IPAddress.id", backref="players")
 
     def colored_name(self, colors):
         color = colors[UserLevels(self.access_level).lower()]
         name = self.name
-        return color + name + colors["default"]
+        title = self.title
+        return title + color + name + colors["default"]
 
     @property
     def storage(self):
@@ -288,7 +298,8 @@ class PlayerManager(object):
                                 client_id=-1,
                                 ip=ip,
                                 planet="",
-                                on_ship=True)
+                                on_ship=True,
+								title="")
                 player.ips = [IPAddress(ip=ip)]
                 session.add(player)
             if uuid == self.config.owner_uuid:
