@@ -87,7 +87,7 @@ class UserCommandPlugin(SimpleCommandPlugin):
                     if owner_count <= 1:
                         self.protocol.send_chat_message("You are the only (or last) owner. Promote denied!")
                         return
-                if old_rank >= self.protocol.player.access_level and not self.protocol.player.access_level != UserLevels.ADMIN:
+                if old_rank > self.protocol.player.access_level:
                     self.protocol.send_chat_message(
                         "You cannot change that user's access level as they are at least at an equal level as you.")
                     return
