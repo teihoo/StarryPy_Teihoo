@@ -1,4 +1,5 @@
 #import pprint
+import string
 import socket
 from twisted.internet import reactor
 from base_plugin import SimpleCommandPlugin, BasePlugin
@@ -15,7 +16,7 @@ class UserCommandPlugin(SimpleCommandPlugin):
     depends = ['command_dispatcher', 'player_manager']
     commands = ["who", "whoami", "whois", "promote", "kick", "ban", "ban_list", "unban", "item", "planet", "mute",
                 "unmute",
-                "passthrough", "shutdown", "timestamps"]
+                "passthrough", "shutdown", "timestamps", "title", "title_reset"]
     auto_activate = True
 
     def activate(self):
@@ -86,7 +87,7 @@ class UserCommandPlugin(SimpleCommandPlugin):
                     if owner_count <= 1:
                         self.protocol.send_chat_message("You are the only (or last) owner. Promote denied!")
                         return
-                if old_rank >= self.protocol.player.access_level and not self.protocol.player.access_level != UserLevels.ADMIN:
+                if old_rank > self.protocol.player.access_level:
                     self.protocol.send_chat_message(
                         "You cannot change that user's access level as they are at least at an equal level as you.")
                     return
@@ -118,6 +119,69 @@ class UserCommandPlugin(SimpleCommandPlugin):
                 return
         else:
             self.protocol.send_chat_message(self.promote.__doc__)
+			
+    @permissions(UserLevels.MODERATOR)
+    def title(self, data):
+        """Set someone's title. Underscores (_) will be replaced with spaces.\n\tUsage: /title (player) (title)"""
+        if len(data) > 0:
+            name = " ".join(data[:-1])
+            title = data[-1]
+            title = string.replace(title, '_', ' ')
+            player = self.player_manager.get_by_name(name)
+            if player is not None:
+                old_rank = player.access_level
+                players = self.player_manager.all()
+                if old_rank >= self.protocol.player.access_level and not self.protocol.player.access_level != UserLevels.ADMIN:
+                    self.protocol.send_chat_message(
+                        "You cannot change that user's title as they are at least at an equal level as you.")
+                    return
+
+                old_title = player.title
+                self.set_title(player, title)
+
+                self.protocol.send_chat_message("%s: %s -> %s" % (
+                    player.colored_name(self.config.colors), old_title,
+                    title))
+                try:
+                    self.factory.protocols[player.protocol].send_chat_message(
+                        "%s set your title to %s" % (
+                            self.protocol.player.colored_name(self.config.colors), title))
+                except KeyError:
+                    self.logger.info("Titled player is not logged in.")
+            else:
+                self.protocol.send_chat_message("Player not found!\n" + self.title.__doc__)
+                return
+        else:
+            self.protocol.send_chat_message(self.title.__doc__)
+			
+    @permissions(UserLevels.MODERATOR)
+    def title_reset(self, data):
+        """Reset someone's title.\n\tUsage: /title_reset (player)"""
+        if len(data) > 0:
+            name = " ".join(data[:-1])
+            player = self.player_manager.get_by_name(name)
+            if player is not None:
+                old_rank = player.access_level
+                players = self.player_manager.all()
+                if old_rank >= self.protocol.player.access_level and not self.protocol.player.access_level != UserLevels.ADMIN:
+                    self.protocol.send_chat_message(
+                        "You cannot reset that user's title as they are at least at an equal level as you.")
+                    return
+
+                self.set_title(player, "")
+                self.protocol.send_chat_message("%s's title was reset" % (player.colored_name(self.config.colors)))
+                
+                try:
+                    self.factory.protocols[player.protocol].send_chat_message(
+                        "%s reset your title" % (
+                            self.protocol.player.colored_name(self.config.colors)))
+                except KeyError:
+                    self.logger.info("Targeted player is not logged in.")
+            else:
+                self.protocol.send_chat_message("Player not found!\n" + self.title_reset.__doc__)
+                return
+        else:
+            self.protocol.send_chat_message(self.title_reset.__doc__)
 
     @permissions(UserLevels.MODERATOR)
     def make_guest(self, player):
@@ -138,6 +202,10 @@ class UserCommandPlugin(SimpleCommandPlugin):
     @permissions(UserLevels.OWNER)
     def make_owner(self, player):
         player.access_level = UserLevels.OWNER
+		
+    @permissions(UserLevels.MODERATOR)
+    def set_title(self, player, title):
+        player.title = title
 
     @permissions(UserLevels.MODERATOR)
     def kick(self, data):
